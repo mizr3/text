@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gothic/Monospace Text Editor</title>
+    <title>Advanced Text Editor</title>
     <style>
         :root {
             --bg-color: #f8f9fa;
@@ -12,20 +12,20 @@
             --border-color: #dee2e6;
             --accent-color: #4dabf7;
             --accent-hover: #339af0;
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --toolbar-bg: #f1f3f5;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
         }
 
-        /* ダークモード */
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --bg-color: #1a1b1e;
-                --container-bg: #25262b;
-                --text-color: #c1c2c5;
-                --border-color: #373a40;
-                --accent-color: #3b5bdb;
-                --accent-hover: #4c6ef5;
-                --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-            }
+        /* 明示的なダークモードクラス */
+        .dark-theme {
+            --bg-color: #1a1b1e;
+            --container-bg: #25262b;
+            --text-color: #c1c2c5;
+            --border-color: #373a40;
+            --accent-color: #3b5bdb;
+            --accent-hover: #4c6ef5;
+            --toolbar-bg: #2c2e33;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
         }
 
         * {
@@ -35,7 +35,7 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
             display: flex;
@@ -43,12 +43,12 @@
             align-items: center;
             min-height: 100vh;
             padding: 20px;
-            transition: background-color 0.3s, color 0.3s;
+            transition: background-color 0.2s, color 0.2s;
         }
 
         .editor-container {
             width: 100%;
-            max-width: 800px;
+            max-width: 900px;
             background-color: var(--container-bg);
             border-radius: 8px;
             box-shadow: var(--shadow);
@@ -57,23 +57,24 @@
             flex-direction: column;
             height: calc(100vh - 40px);
             overflow: hidden;
+            position: relative;
         }
 
         /* ツールバー */
         .toolbar {
-            padding: 12px 16px;
+            padding: 10px 16px;
             border-bottom: 1px solid var(--border-color);
             display: flex;
             flex-wrap: wrap;
             gap: 12px;
             align-items: center;
-            background-color: var(--container-bg);
+            background-color: var(--toolbar-bg);
         }
 
         .tool-group {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
         label {
@@ -89,34 +90,39 @@
             color: var(--text-color);
             font-size: 0.9rem;
             outline: none;
-            transition: border-color 0.2s;
         }
 
         select:focus, input[type="text"]:focus {
             border-color: var(--accent-color);
         }
 
-        input[type="text"] {
-            width: 160px;
+        /* ボタン類の共通スタイル */
+        .btn {
+            background-color: var(--container-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
         }
 
-        /* ダウンロードボタン */
-        .btn-download {
+        .btn:hover {
+            background-color: var(--border-color);
+        }
+
+        .btn-primary {
             background-color: var(--accent-color);
             color: white;
             border: none;
-            padding: 6px 14px;
-            border-radius: 4px;
-            font-size: 0.9rem;
             font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
         }
 
-        .btn-download:hover {
+        .btn-primary:hover {
             background-color: var(--accent-hover);
         }
 
@@ -126,7 +132,6 @@
             position: relative;
         }
 
-        /* 等幅フォントでスペースを分かりやすく */
         textarea {
             width: 100%;
             height: 100%;
@@ -138,20 +143,55 @@
             font-size: 1rem;
             line-height: 1.6;
             outline: none;
-            /* タブ幅を4文字分にする設定 */
             tab-size: 4;
             -moz-tab-size: 4;
+            
+            /* 全角記号（※など）や空白が綺麗に正方形で揃う等幅ゴシックの指定 */
+            font-family: "BIZ UDゴシック", "BIZ UDMonospace", "Osaka-mono", "MS Gothic", "MS ゴシック", "Courier New", Courier, monospace;
         }
 
-        /* フォントクラス */
-        .font-monospace {
-            /* 全角・半角スペースの幅が揃いやすい等幅（コーディング用）フォント */
-            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, "BIZ UDゴシック", "Meiryo UI", monospace;
+        /* 検索・置換ポップアップパネル */
+        .search-panel {
+            position: absolute;
+            top: 60px;
+            right: 20px;
+            background-color: var(--container-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            padding: 14px;
+            display: none; /* 初期状態は非表示 */
+            flex-direction: column;
+            gap: 10px;
+            z-index: 10;
+            width: 320px;
         }
 
-        .font-gothic {
-            /* スッキリとした角ゴシック */
-            font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+        .search-panel.active {
+            display: flex;
+        }
+
+        .search-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .search-row label {
+            width: 50px;
+            flex-shrink: 0;
+        }
+
+        .search-row input {
+            flex-grow: 1;
+        }
+
+        .search-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 6px;
+            margin-top: 4px;
         }
 
         /* ステータスバー */
@@ -162,60 +202,95 @@
             color: #868e96;
             display: flex;
             justify-content: space-between;
+            background-color: var(--toolbar-bg);
         }
     </style>
 </head>
 <body>
 
-    <div class="editor-container">
+    <div class="editor-container" id="editor-container">
         <!-- ツールバー -->
         <div class="toolbar">
             <div class="tool-group">
-                <label for="font-select">フォント:</label>
-                <select id="font-select">
-                    <option value="font-monospace" selected>等幅ゴシック (推奨)</option>
-                    <option value="font-gothic">標準ゴシック</option>
-                </select>
+                <button class="btn" id="theme-toggle-btn">☀️ ライト / 🌙 ダーク</button>
+                <button class="btn" id="search-toggle-btn">🔍 検索・置換</button>
             </div>
 
             <div class="tool-group" style="margin-left: auto;">
                 <input type="text" id="filename-input" value="document" placeholder="ファイル名">
                 <span>.txt</span>
-                <button class="btn-download" id="download-btn">
-                    保存 / ダウンロード
-                </button>
+                <button class="btn btn-primary" id="download-btn">保存 / DL</button>
+            </div>
+        </div>
+
+        <!-- 検索・置換ポップアップ（コンテナ内絶対配置） -->
+        <div class="search-panel" id="search-panel">
+            <div class="search-row">
+                <label>検索:</label>
+                <input type="text" id="search-input" placeholder="検索する文字列">
+            </div>
+            <div class="search-row">
+                <label>置換:</label>
+                <input type="text" id="replace-input" placeholder="置換後の文字列">
+            </div>
+            <div class="search-actions">
+                <button class="btn" id="btn-find-next" style="font-size:0.8rem;">次を検索</button>
+                <button class="btn" id="btn-replace" style="font-size:0.8rem;">置換</button>
+                <button class="btn" id="btn-replace-all" style="font-size:0.8rem;">すべて置換</button>
+                <button class="btn" id="btn-close-search" style="font-size:0.8rem; background:#fa5252; color:white; border:none;">閉じる</button>
             </div>
         </div>
 
         <!-- テキストエリア -->
         <div class="textarea-wrapper">
-            <textarea id="text-editor" class="font-monospace" placeholder="ここにテキストを入力してください..."></textarea>
+            <textarea id="text-editor" placeholder="ここにテキストを入力してください...&#10;※ 全角記号やスペースの幅も綺麗に揃います。"></textarea>
         </div>
 
         <!-- ステータスバー -->
         <div class="statusbar">
             <div id="char-count">文字数: 0 | 行数: 1</div>
-            <div>自動保存中（ブラウザ内）</div>
+            <div id="search-status"></div>
         </div>
     </div>
 
     <script>
         const editor = document.getElementById('text-editor');
-        const fontSelect = document.getElementById('font-select');
         const filenameInput = document.getElementById('filename-input');
         const downloadBtn = document.getElementById('download-btn');
         const charCount = document.getElementById('char-count');
+        const container = document.getElementById('editor-container');
+        
+        // テーマ・検索関連の要素
+        const themeToggleBtn = document.getElementById('theme-toggle-btn');
+        const searchToggleBtn = document.getElementById('search-toggle-btn');
+        const searchPanel = document.getElementById('search-panel');
+        const searchInput = document.getElementById('search-input');
+        const replaceInput = document.getElementById('replace-input');
+        const btnFindNext = document.getElementById('btn-find-next');
+        const btnReplace = document.getElementById('btn-replace');
+        const btnReplaceAll = document.getElementById('btn-replace-all');
+        const btnCloseSearch = document.getElementById('btn-close-search');
+        const searchStatus = document.getElementById('search-status');
 
-        // 1. ローカルストレージからの自動復元
+        let lastSearchIndex = 0;
+
+        // 1. 初期化（ストレージ復元 ＆ OSのテーマ設定確認）
         window.addEventListener('DOMContentLoaded', () => {
+            // テキストの復元
             const savedText = localStorage.getItem('local_editor_text');
             if (savedText) {
                 editor.value = savedText;
                 updateStats();
             }
+
+            // テーマの復元（なければOSの設定に合わせる）
+            const savedTheme = localStorage.getItem('editor_theme');
+            if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                container.classList.add('dark-theme');
+            }
         });
 
-        // 2. 入力時の自動保存 & 統計更新
+        // 2. 入力時の自動保存 ＆ 文字数カウント
         editor.addEventListener('input', () => {
             localStorage.setItem('local_editor_text', editor.value);
             updateStats();
@@ -228,48 +303,136 @@
             charCount.textContent = `文字数: ${chars} | 行数: ${lines}`;
         }
 
-        // 3. フォント切り替え
-        fontSelect.addEventListener('change', (e) => {
-            const selectedClass = e.target.value;
-            editor.className = selectedClass;
+        // 3. ライト/ダークモード切り替え
+        themeToggleBtn.addEventListener('click', () => {
+            container.classList.toggle('dark-theme');
+            const isDark = container.classList.contains('dark-theme');
+            localStorage.setItem('editor_theme', isDark ? 'dark' : 'light');
         });
 
-        // 4. TXTファイルとしてダウンロード
+        // 4. 検索・置換パネルの開閉
+        searchToggleBtn.addEventListener('click', () => {
+            searchPanel.classList.toggle('active');
+            if (searchPanel.classList.contains('active')) {
+                searchInput.focus();
+                searchInput.select();
+            }
+        });
+
+        btnCloseSearch.addEventListener('click', () => {
+            searchPanel.classList.remove('active');
+            searchStatus.textContent = "";
+            editor.focus();
+        });
+
+        // 5. 検索機能 (次を検索)
+        btnFindNext.addEventListener('click', findNext);
+        
+        function findNext() {
+            const searchStr = searchInput.value;
+            if (!searchStr) return;
+
+            const text = editor.value;
+            let index = text.indexOf(searchStr, lastSearchIndex);
+
+            // 見つからなかった場合は最初から再検索
+            if (index === -1) {
+                index = text.indexOf(searchStr, 0);
+            }
+
+            if (index !== -1) {
+                editor.focus();
+                editor.setSelectionRange(index, index + searchStr.length);
+                lastSearchIndex = index + searchStr.length; // 次回用にインデックスを進める
+                searchStatus.textContent = "見つかりました";
+                
+                // 選択位置までスクロールさせる
+                const row = text.substring(0, index).split('\n').length;
+                editor.scrollTop = (row - 3) * 25; 
+            } else {
+                searchStatus.textContent = "一致する文字列がありません";
+                lastSearchIndex = 0;
+            }
+        }
+
+        // 6. 置換機能 (現在選択されている部分を置换、または次を置換)
+        btnReplace.addEventListener('click', () => {
+            const searchStr = searchInput.value;
+            const replaceStr = replaceInput.value;
+            if (!searchStr) return;
+
+            const start = editor.selectionStart;
+            const end = editor.selectionEnd;
+            const selectedText = editor.value.substring(start, end);
+
+            // 現在選択されている文字が検索ワードと一致していれば置換
+            if (selectedText === searchStr) {
+                editor.value = editor.value.substring(0, start) + replaceStr + editor.value.substring(end);
+                editor.setSelectionRange(start, start + replaceStr.length);
+                localStorage.setItem('local_editor_text', editor.value);
+                updateStats();
+                // 置換したら自動的に次を検索
+                findNext();
+            } else {
+                // 選択されていなければ、まず検索する
+                findNext();
+            }
+        });
+
+        // 7. すべて置換
+        btnReplaceAll.addEventListener('click', () => {
+            const searchStr = searchInput.value;
+            const replaceStr = replaceInput.value;
+            if (!searchStr) return;
+
+            const text = editor.value;
+            const parts = text.split(searchStr);
+            const count = parts.length - 1;
+
+            if (count > 0) {
+                editor.value = parts.join(replaceStr);
+                localStorage.setItem('local_editor_text', editor.value);
+                updateStats();
+                searchStatus.textContent = `${count} 箇所を置換しました`;
+            } else {
+                searchStatus.textContent = "置換対象が見つかりません";
+            }
+        });
+
+        // ショートカットキー設定 (Ctrl+F または Cmd+F で検索パネルを開く)
+        window.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                e.preventDefault();
+                searchPanel.classList.add('active');
+                searchInput.focus();
+                searchInput.select();
+            }
+        });
+
+        // 8. TXTファイルとしてダウンロード
         downloadBtn.addEventListener('click', () => {
             const textContent = editor.value;
             const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
             
-            // ファイル名を取得（未入力なら 'document' にフォールバック）
             let filename = filenameInput.value.trim();
-            if (!filename) {
-                 filename = 'document';
-            }
+            if (!filename) filename = 'document';
             filename += '.txt';
 
-            // 一時的なダウンロードリンクを作成してクリックを発火
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             link.download = filename;
             link.click();
-
-            // メモリの解放
             URL.revokeObjectURL(link.href);
         });
 
-        // Tabキーの入力でインデント（スペース4つ）を挿入可能にする
+        // Tabキーでスペース4つを挿入する挙動
         editor.addEventListener('keydown', (e) => {
             if (e.key === 'Tab') {
                 e.preventDefault();
                 const start = editor.selectionStart;
                 const end = editor.selectionEnd;
-
-                // テキストの間にスペース4つを挿入
                 editor.value = editor.value.substring(0, start) + "    " + editor.value.substring(end);
-
-                // カーソル位置をスペースの後に移動
                 editor.selectionStart = editor.selectionEnd = start + 4;
-                
-                // ストレージと文字数を更新
                 localStorage.setItem('local_editor_text', editor.value);
                 updateStats();
             }
