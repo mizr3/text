@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Text Editor</title>
+    <title>Advanced Text Editor (Fixed)</title>
     <style>
+        /* カラー変数の定義 */
         :root {
             --bg-color: #f8f9fa;
             --container-bg: #ffffff;
@@ -13,11 +14,11 @@
             --accent-color: #4dabf7;
             --accent-hover: #339af0;
             --toolbar-bg: #f1f3f5;
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
 
-        /* 明示的なダークモードクラス */
-        .dark-theme {
+        /* ダークモードクラス（bodyに適用して全体の色を変える） */
+        body.dark-theme {
             --bg-color: #1a1b1e;
             --container-bg: #25262b;
             --text-color: #c1c2c5;
@@ -43,6 +44,7 @@
             align-items: center;
             min-height: 100vh;
             padding: 20px;
+            /* 背景全体の切り替えをスムーズにする */
             transition: background-color 0.2s, color 0.2s;
         }
 
@@ -96,7 +98,7 @@
             border-color: var(--accent-color);
         }
 
-        /* ボタン類の共通スタイル */
+        /* ボタン共通スタイル */
         .btn {
             background-color: var(--container-bg);
             color: var(--text-color);
@@ -146,8 +148,20 @@
             tab-size: 4;
             -moz-tab-size: 4;
             
-            /* 全角記号（※など）や空白が綺麗に正方形で揃う等幅ゴシックの指定 */
-            font-family: "BIZ UDゴシック", "BIZ UDMonospace", "Osaka-mono", "MS Gothic", "MS ゴシック", "Courier New", Courier, monospace;
+            /* 【重要】※や■などの記号を強制的に全角にする設定 */
+            font-variant-east-asian: full-width;
+            text-rendering: optimizeLegibility;
+        }
+
+        /* フォントクラスの定義 */
+        .font-monospace {
+            /* 全角・半角が綺麗に揃う等幅ゴシックの指定 */
+            font-family: "BIZ UDゴシック", "BIZ UDMonospace", "Osaka-mono", "MS Gothic", "MS ゴシック", monospace;
+        }
+
+        .font-gothic {
+            /* 標準的なプロポーショナル（可変幅）ゴシック */
+            font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
         }
 
         /* 検索・置換ポップアップパネル */
@@ -160,7 +174,7 @@
             border-radius: 6px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.15);
             padding: 14px;
-            display: none; /* 初期状態は非表示 */
+            display: none;
             flex-direction: column;
             gap: 10px;
             z-index: 10;
@@ -208,22 +222,30 @@
 </head>
 <body>
 
-    <div class="editor-container" id="editor-container">
+    <div class="editor-container">
         <!-- ツールバー -->
         <div class="toolbar">
             <div class="tool-group">
-                <button class="btn" id="theme-toggle-btn">☀️ ライト / 🌙 ダーク</button>
+                <button class="btn" id="theme-toggle-btn">☀️/🌙 テーマ</button>
                 <button class="btn" id="search-toggle-btn">🔍 検索・置換</button>
+            </div>
+
+            <div class="tool-group">
+                <label for="font-select">フォント:</label>
+                <select id="font-select">
+                    <option value="font-monospace" selected>等幅ゴシック (推奨)</option>
+                    <option value="font-gothic">標準ゴシック</option>
+                </select>
             </div>
 
             <div class="tool-group" style="margin-left: auto;">
                 <input type="text" id="filename-input" value="document" placeholder="ファイル名">
                 <span>.txt</span>
-                <button class="btn btn-primary" id="download-btn">保存 / DL</button>
+                <button class="btn btn-primary" id="download-btn">保存/DL</button>
             </div>
         </div>
 
-        <!-- 検索・置換ポップアップ（コンテナ内絶対配置） -->
+        <!-- 検索・置換ポップアップ -->
         <div class="search-panel" id="search-panel">
             <div class="search-row">
                 <label>検索:</label>
@@ -243,7 +265,8 @@
 
         <!-- テキストエリア -->
         <div class="textarea-wrapper">
-            <textarea id="text-editor" placeholder="ここにテキストを入力してください...&#10;※ 全角記号やスペースの幅も綺麗に揃います。"></textarea>
+            <!-- デフォルトで等幅フォントクラスを適用 -->
+            <textarea id="text-editor" class="font-monospace" placeholder="ここにテキストを入力してください...&#10;※全角記号や空白の幅もしっかり揃います。"></textarea>
         </div>
 
         <!-- ステータスバー -->
@@ -255,10 +278,10 @@
 
     <script>
         const editor = document.getElementById('text-editor');
+        const fontSelect = document.getElementById('font-select');
         const filenameInput = document.getElementById('filename-input');
         const downloadBtn = document.getElementById('download-btn');
         const charCount = document.getElementById('char-count');
-        const container = document.getElementById('editor-container');
         
         // テーマ・検索関連の要素
         const themeToggleBtn = document.getElementById('theme-toggle-btn');
@@ -286,7 +309,14 @@
             // テーマの復元（なければOSの設定に合わせる）
             const savedTheme = localStorage.getItem('editor_theme');
             if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                container.classList.add('dark-theme');
+                document.body.classList.add('dark-theme');
+            }
+
+            // フォント設定の復元
+            const savedFont = localStorage.getItem('editor_font');
+            if (savedFont) {
+                fontSelect.value = savedFont;
+                editor.className = savedFont;
             }
         });
 
@@ -303,14 +333,21 @@
             charCount.textContent = `文字数: ${chars} | 行数: ${lines}`;
         }
 
-        // 3. ライト/ダークモード切り替え
+        // 3. ライト/ダークモード切り替え (body全体に適用)
         themeToggleBtn.addEventListener('click', () => {
-            container.classList.toggle('dark-theme');
-            const isDark = container.classList.contains('dark-theme');
+            document.body.classList.toggle('dark-theme');
+            const isDark = document.body.classList.contains('dark-theme');
             localStorage.setItem('editor_theme', isDark ? 'dark' : 'light');
         });
 
-        // 4. 検索・置換パネルの開閉
+        // 4. フォント切り替え
+        fontSelect.addEventListener('change', (e) => {
+            const selectedClass = e.target.value;
+            editor.className = selectedClass;
+            localStorage.setItem('editor_font', selectedClass);
+        });
+
+        // 5. 検索・置換パネルの開閉
         searchToggleBtn.addEventListener('click', () => {
             searchPanel.classList.toggle('active');
             if (searchPanel.classList.contains('active')) {
@@ -325,7 +362,7 @@
             editor.focus();
         });
 
-        // 5. 検索機能 (次を検索)
+        // 6. 検索機能
         btnFindNext.addEventListener('click', findNext);
         
         function findNext() {
@@ -335,7 +372,6 @@
             const text = editor.value;
             let index = text.indexOf(searchStr, lastSearchIndex);
 
-            // 見つからなかった場合は最初から再検索
             if (index === -1) {
                 index = text.indexOf(searchStr, 0);
             }
@@ -343,10 +379,9 @@
             if (index !== -1) {
                 editor.focus();
                 editor.setSelectionRange(index, index + searchStr.length);
-                lastSearchIndex = index + searchStr.length; // 次回用にインデックスを進める
+                lastSearchIndex = index + searchStr.length;
                 searchStatus.textContent = "見つかりました";
                 
-                // 選択位置までスクロールさせる
                 const row = text.substring(0, index).split('\n').length;
                 editor.scrollTop = (row - 3) * 25; 
             } else {
@@ -355,7 +390,7 @@
             }
         }
 
-        // 6. 置換機能 (現在選択されている部分を置换、または次を置換)
+        // 7. 置換機能
         btnReplace.addEventListener('click', () => {
             const searchStr = searchInput.value;
             const replaceStr = replaceInput.value;
@@ -365,21 +400,18 @@
             const end = editor.selectionEnd;
             const selectedText = editor.value.substring(start, end);
 
-            // 現在選択されている文字が検索ワードと一致していれば置換
             if (selectedText === searchStr) {
                 editor.value = editor.value.substring(0, start) + replaceStr + editor.value.substring(end);
                 editor.setSelectionRange(start, start + replaceStr.length);
                 localStorage.setItem('local_editor_text', editor.value);
                 updateStats();
-                // 置換したら自動的に次を検索
                 findNext();
             } else {
-                // 選択されていなければ、まず検索する
                 findNext();
             }
         });
 
-        // 7. すべて置換
+        // 8. すべて置換
         btnReplaceAll.addEventListener('click', () => {
             const searchStr = searchInput.value;
             const replaceStr = replaceInput.value;
@@ -409,7 +441,7 @@
             }
         });
 
-        // 8. TXTファイルとしてダウンロード
+        // 9. TXTファイルとしてダウンロード
         downloadBtn.addEventListener('click', () => {
             const textContent = editor.value;
             const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
