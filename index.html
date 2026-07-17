@@ -2,8 +2,8 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Advanced Layout Text Editor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Fixed Layout Text Editor</title>
     <style>
         /* カラー変数の定義 */
         :root {
@@ -15,8 +15,9 @@
             --accent-hover: #339af0;
             --toolbar-bg: #f1f3f5;
             --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-            /* ステータスバーの文字色を濃く修正 */
             --status-text: #495057; 
+            --scrollbar-thumb: rgba(0, 0, 0, 0.2);
+            --scrollbar-track: rgba(0, 0, 0, 0.05);
         }
 
         /* ダークモードクラス（bodyに適用して全体の色を変える） */
@@ -29,8 +30,9 @@
             --accent-hover: #4c6ef5;
             --toolbar-bg: #2c2e33;
             --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-            /* ダークモード時もクッキリ見える濃いめのグレーに変更 */
             --status-text: #adb5bd; 
+            --scrollbar-thumb: rgba(255, 255, 255, 0.25);
+            --scrollbar-track: rgba(255, 255, 255, 0.05);
         }
 
         * {
@@ -39,12 +41,13 @@
             padding: 0;
         }
 
-        /* 画面全体のスクロールを完全に禁止 */
-        html, body {
+        /* 画面全体のスクロールを完全に禁止し、バウンスを防止 */
+        html {
             width: 100%;
             height: 100%;
             overflow: hidden; 
-            position: fixed; 
+            position: fixed;
+            touch-action: none; /* 全体的なスワイプジェスチャーを制限 */
         }
 
         body {
@@ -54,14 +57,21 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 15px 0; /* 上下だけ少し余白を残す */
+            width: 100%;
+            height: 100%;
+            position: fixed;
+            top: 0;
+            left: 0;
+            overflow: hidden;
+            padding: 10px 0; /* 上下に安全な隙間を設置 */
             transition: background-color 0.2s, color 0.2s;
+            touch-action: none;
         }
 
-        /* 横幅をウィンドウの95%まで拡大 */
+        /* 横幅をウィンドウの95%まで拡大。動的にJSで高さを制御 */
         .editor-container {
             width: 95%; 
-            max-width: 1400px; /* 超ワイドモニターでも崩れないように上限だけ設定 */
+            max-width: 1400px;
             height: 100%;
             background-color: var(--container-bg);
             border-radius: 8px;
@@ -71,6 +81,7 @@
             flex-direction: column;
             position: relative;
             overflow: hidden; 
+            touch-action: none; /* コンテナ全体のバウンスも抑止 */
         }
 
         /* ツールバー */
@@ -148,7 +159,7 @@
             overflow: hidden;
         }
 
-        /* テキストボックスのみ縦スクロール */
+        /* テキストボックスのみ縦スクロール、かつ右側スクロールバー常時表示 */
         textarea {
             width: 100%;
             height: 100%;
@@ -163,12 +174,33 @@
             tab-size: 4;
             -moz-tab-size: 4;
             
-            overflow-y: auto; 
+            overflow-y: scroll; /* 縦スクロールバーを「常に」表示 */
             overflow-x: hidden; 
             
             font-variant-east-asian: full-width;
             text-rendering: optimizeLegibility;
+            
+            /* iPad/iOSで指スクロールが途切れないようにする設定 */
             -webkit-overflow-scrolling: touch;
+            touch-action: pan-y; /* 縦方向の指スクロールのみをテキストボックスに許可 */
+        }
+
+        /* 右側に常に明確なスクロールバーを表示するためのカスタムスタイル (iPad / Chrome対応) */
+        textarea::-webkit-scrollbar {
+            width: 10px; /* スクロールバーの横幅 */
+            display: block;
+        }
+
+        textarea::-webkit-scrollbar-track {
+            background: var(--scrollbar-track);
+            border-radius: 0 4px 4px 0;
+        }
+
+        textarea::-webkit-scrollbar-thumb {
+            background: var(--scrollbar-thumb);
+            border-radius: 5px;
+            border: 2px solid transparent;
+            background-clip: padding-box;
         }
 
         /* フォントクラスの定義 */
@@ -234,9 +266,9 @@
         .statusbar {
             padding: 8px 16px;
             border-top: 1px solid var(--border-color);
-            font-size: 0.85rem; /* 少しだけサイズアップ */
-            color: var(--status-text); /* 濃い文字色を適用 */
-            font-weight: 500; /* 太さを少しプラス */
+            font-size: 0.85rem; 
+            color: var(--status-text); 
+            font-weight: 500; 
             display: flex;
             justify-content: space-between;
             background-color: var(--toolbar-bg);
@@ -246,9 +278,9 @@
 </head>
 <body>
 
-    <div class="editor-container">
+    <div class="editor-container" id="editor-container">
         <!-- ツールバー -->
-        <div class="toolbar">
+        <div class="toolbar" id="toolbar">
             <div class="tool-group">
                 <button class="btn" id="theme-toggle-btn">☀️/🌙 テーマ</button>
                 <button class="btn" id="search-toggle-btn">🔍 検索・置換・移動</button>
@@ -307,7 +339,7 @@
         </div>
 
         <!-- ステータスバー -->
-        <div class="statusbar">
+        <div class="statusbar" id="statusbar">
             <div id="char-count">文字数: 0 | 行数: 1</div>
             <div id="search-status"></div>
         </div>
@@ -320,7 +352,7 @@
         const downloadBtn = document.getElementById('download-btn');
         const charCount = document.getElementById('char-count');
         
-        // パネル関連の要素
+        // パネル・ツール関連の要素
         const themeToggleBtn = document.getElementById('theme-toggle-btn');
         const searchToggleBtn = document.getElementById('search-toggle-btn');
         const searchPanel = document.getElementById('search-panel');
@@ -338,8 +370,48 @@
 
         let lastSearchIndex = 0;
 
+        // iPad / iPhone 等でエディタ外部の余白をタッチ・スワイプした際のバウンススクロールを物理的に完全禁止
+        document.addEventListener('touchmove', function(e) {
+            // textarea内部、ツールバー、ポップアップ以外の領域で指が動いたらスクロール処理を打ち切る
+            if (!e.target.closest('#text-editor') && 
+                !e.target.closest('.search-panel') && 
+                !e.target.closest('#toolbar')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // iPad / iPhone などのソフトウェアキーボード立ち上がり時、および画面回転時のレイアウト・ズレ対策
+        const adjustViewportHeight = () => {
+            if (window.visualViewport) {
+                // キーボードを考慮した、現在「実際に見えている領域」の高さを取得
+                const targetHeight = window.visualViewport.height;
+                // bodyのサイズをこの高さに固定することで、キーボード表示時の上への画面ズレを完全防止
+                document.body.style.height = `${targetHeight}px`;
+                // ページ自体の意図しないスクロール位置を常に原点に引き戻す
+                window.scrollTo(0, 0);
+            } else {
+                document.body.style.height = `${window.innerHeight}px`;
+            }
+        };
+
+        // イベント監視
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', adjustViewportHeight);
+            window.visualViewport.addEventListener('scroll', adjustViewportHeight);
+        }
+        window.addEventListener('resize', adjustViewportHeight);
+
+        // テキストボックスフォーカス時にも全体スクロールの発生を防ぐ
+        editor.addEventListener('focus', () => {
+            setTimeout(() => {
+                window.scrollTo(0, 0);
+            }, 50);
+        });
+
         // 1. 初期化（ストレージ復元 ＆ テーマ設定確認）
         window.addEventListener('DOMContentLoaded', () => {
+            adjustViewportHeight();
+
             const savedText = localStorage.getItem('local_editor_text');
             if (savedText) {
                 editor.value = savedText;
@@ -481,17 +553,13 @@
             const totalChars = text.length;
             if (totalChars === 0) return;
 
-            // %値から文字のターゲットインデックスを計算
             const targetIndex = Math.floor(totalChars * (percent / 100));
 
             editor.focus();
-            // カーソルを指定位置へ移動 (範囲選択ではなくピンポイントに配置)
             editor.setSelectionRange(targetIndex, targetIndex);
 
-            // スクロール位置を計算して連動
             const scrollHeight = editor.scrollHeight;
             const clientHeight = editor.clientHeight;
-            // 最大スクロール可能領域に対する%分をスクロールさせる
             editor.scrollTop = (scrollHeight - clientHeight) * (percent / 100);
 
             searchStatus.textContent = `全体の ${percent}% 位置に移動しました`;
