@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fixed Layout Text Editor</title>
+    <title>Advanced Layout Text Editor</title>
     <style>
         /* カラー変数の定義 */
         :root {
@@ -15,6 +15,8 @@
             --accent-hover: #339af0;
             --toolbar-bg: #f1f3f5;
             --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            /* ステータスバーの文字色を濃く修正 */
+            --status-text: #495057; 
         }
 
         /* ダークモードクラス（bodyに適用して全体の色を変える） */
@@ -27,6 +29,8 @@
             --accent-hover: #4c6ef5;
             --toolbar-bg: #2c2e33;
             --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            /* ダークモード時もクッキリ見える濃いめのグレーに変更 */
+            --status-text: #adb5bd; 
         }
 
         * {
@@ -35,12 +39,12 @@
             padding: 0;
         }
 
-        /* 画面全体のスクロールを完全に禁止する */
+        /* 画面全体のスクロールを完全に禁止 */
         html, body {
             width: 100%;
             height: 100%;
             overflow: hidden; 
-            position: fixed; /* スマホでの引っ張りバウンススクロールを防止 */
+            position: fixed; 
         }
 
         body {
@@ -50,15 +54,15 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 15px;
+            padding: 15px 0; /* 上下だけ少し余白を残す */
             transition: background-color 0.2s, color 0.2s;
         }
 
-        /* 画面サイズぴったりに固定するコンテナ */
+        /* 横幅をウィンドウの95%まで拡大 */
         .editor-container {
-            width: 100%;
-            max-width: 900px;
-            height: 100%; /* 親要素(body)に対して100% */
+            width: 95%; 
+            max-width: 1400px; /* 超ワイドモニターでも崩れないように上限だけ設定 */
+            height: 100%;
             background-color: var(--container-bg);
             border-radius: 8px;
             box-shadow: var(--shadow);
@@ -66,7 +70,7 @@
             display: flex;
             flex-direction: column;
             position: relative;
-            overflow: hidden; /* コンテナからはみ出す要素を隠す */
+            overflow: hidden; 
         }
 
         /* ツールバー */
@@ -78,7 +82,7 @@
             gap: 12px;
             align-items: center;
             background-color: var(--toolbar-bg);
-            flex-shrink: 0; /* 縮まないように固定 */
+            flex-shrink: 0;
         }
 
         .tool-group {
@@ -92,7 +96,7 @@
             font-weight: 600;
         }
 
-        select, input[type="text"] {
+        select, input[type="text"], input[type="number"] {
             padding: 6px 10px;
             border: 1px solid var(--border-color);
             border-radius: 4px;
@@ -102,7 +106,7 @@
             outline: none;
         }
 
-        select:focus, input[type="text"]:focus {
+        select:focus, input[type="text"]:focus, input[type="number"]:focus {
             border-color: var(--accent-color);
         }
 
@@ -144,7 +148,7 @@
             overflow: hidden;
         }
 
-        /* 【重要】テキストボックスのみ縦スクロールを許可 */
+        /* テキストボックスのみ縦スクロール */
         textarea {
             width: 100%;
             height: 100%;
@@ -159,14 +163,11 @@
             tab-size: 4;
             -moz-tab-size: 4;
             
-            overflow-y: auto; /* 縦スクロールを有効化 */
-            overflow-x: hidden; /* 横スクロールは隠して自動折り返し */
+            overflow-y: auto; 
+            overflow-x: hidden; 
             
-            /* ※や■などの記号を強制的に全角にする設定 */
             font-variant-east-asian: full-width;
             text-rendering: optimizeLegibility;
-            
-            /* iOSでのスクロールを滑らかにする設定 */
             -webkit-overflow-scrolling: touch;
         }
 
@@ -179,7 +180,7 @@
             font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
         }
 
-        /* 検索・置換ポップアップパネル */
+        /* 検索・置換・ジャンプの複合ポップアップパネル */
         .search-panel {
             position: absolute;
             top: 60px;
@@ -191,9 +192,9 @@
             padding: 14px;
             display: none;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
             z-index: 10;
-            width: 320px;
+            width: 340px;
         }
 
         .search-panel.active {
@@ -208,8 +209,9 @@
         }
 
         .search-row label {
-            width: 50px;
+            width: 75px;
             flex-shrink: 0;
+            font-size: 0.85rem;
         }
 
         .search-row input {
@@ -220,19 +222,25 @@
             display: flex;
             justify-content: flex-end;
             gap: 6px;
-            margin-top: 4px;
+        }
+
+        .divider {
+            height: 1px;
+            background-color: var(--border-color);
+            margin: 4px 0;
         }
 
         /* ステータスバー */
         .statusbar {
             padding: 8px 16px;
             border-top: 1px solid var(--border-color);
-            font-size: 0.8rem;
-            color: #868e96;
+            font-size: 0.85rem; /* 少しだけサイズアップ */
+            color: var(--status-text); /* 濃い文字色を適用 */
+            font-weight: 500; /* 太さを少しプラス */
             display: flex;
             justify-content: space-between;
             background-color: var(--toolbar-bg);
-            flex-shrink: 0; /* 縮まないように固定 */
+            flex-shrink: 0;
         }
     </style>
 </head>
@@ -243,7 +251,7 @@
         <div class="toolbar">
             <div class="tool-group">
                 <button class="btn" id="theme-toggle-btn">☀️/🌙 テーマ</button>
-                <button class="btn" id="search-toggle-btn">🔍 検索・置換</button>
+                <button class="btn" id="search-toggle-btn">🔍 検索・置換・移動</button>
             </div>
 
             <div class="tool-group">
@@ -261,7 +269,7 @@
             </div>
         </div>
 
-        <!-- 検索・置換ポップアップ -->
+        <!-- 検索・置換・移動ポップアップ -->
         <div class="search-panel" id="search-panel">
             <div class="search-row">
                 <label>検索:</label>
@@ -275,7 +283,21 @@
                 <button class="btn" id="btn-find-next" style="font-size:0.8rem;">次を検索</button>
                 <button class="btn" id="btn-replace" style="font-size:0.8rem;">置換</button>
                 <button class="btn" id="btn-replace-all" style="font-size:0.8rem;">すべて置換</button>
-                <button class="btn" id="btn-close-search" style="font-size:0.8rem; background:#fa5252; color:white; border:none;">閉じる</button>
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- %位置への移動機能 -->
+            <div class="search-row">
+                <label>位置指定 (%):</label>
+                <input type="number" id="jump-percent-input" min="0" max="100" value="50" style="width: 70px; flex-grow: 0;">
+                <button class="btn btn-primary" id="btn-jump-percent" style="font-size:0.8rem; flex-grow: 1; justify-content: center;">指定位置に移動</button>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="search-actions">
+                <button class="btn" id="btn-close-search" style="font-size:0.8rem; background:#fa5252; color:white; border:none; width: 100%; justify-content: center;">閉じる</button>
             </div>
         </div>
 
@@ -298,7 +320,7 @@
         const downloadBtn = document.getElementById('download-btn');
         const charCount = document.getElementById('char-count');
         
-        // テーマ・検索関連の要素
+        // パネル関連の要素
         const themeToggleBtn = document.getElementById('theme-toggle-btn');
         const searchToggleBtn = document.getElementById('search-toggle-btn');
         const searchPanel = document.getElementById('search-panel');
@@ -309,10 +331,14 @@
         const btnReplaceAll = document.getElementById('btn-replace-all');
         const btnCloseSearch = document.getElementById('btn-close-search');
         const searchStatus = document.getElementById('search-status');
+        
+        // ジャンプ機能用要素
+        const jumpPercentInput = document.getElementById('jump-percent-input');
+        const btnJumpPercent = document.getElementById('btn-jump-percent');
 
         let lastSearchIndex = 0;
 
-        // 1. 初期化（ストレージ復元 ＆ OSのテーマ設定確認）
+        // 1. 初期化（ストレージ復元 ＆ テーマ設定確認）
         window.addEventListener('DOMContentLoaded', () => {
             const savedText = localStorage.getItem('local_editor_text');
             if (savedText) {
@@ -345,7 +371,7 @@
             charCount.textContent = `文字数: ${chars} | 行数: ${lines}`;
         }
 
-        // 3. ライト/ダークモード切り替え (body全体を変更)
+        // 3. ライト/ダークモード切り替え
         themeToggleBtn.addEventListener('click', () => {
             document.body.classList.toggle('dark-theme');
             const isDark = document.body.classList.contains('dark-theme');
@@ -359,7 +385,7 @@
             localStorage.setItem('editor_font', selectedClass);
         });
 
-        // 5. 検索・置換パネルの開閉
+        // 5. パネルの開閉
         searchToggleBtn.addEventListener('click', () => {
             searchPanel.classList.toggle('active');
             if (searchPanel.classList.contains('active')) {
@@ -394,7 +420,7 @@
                 lastSearchIndex = index + searchStr.length;
                 searchStatus.textContent = "見つかりました";
                 
-                // スクロール位置の自動調整
+                // スクロール位置調整
                 const row = text.substring(0, index).split('\n').length;
                 editor.scrollTop = (row - 3) * 25; 
             } else {
@@ -444,7 +470,34 @@
             }
         });
 
-        // ショートカットキー設定 (Ctrl+F または Cmd+F で検索パネルを開く)
+        // 9. %位置への移動機能
+        btnJumpPercent.addEventListener('click', () => {
+            let percent = parseFloat(jumpPercentInput.value);
+            if (isNaN(percent)) return;
+            if (percent < 0) percent = 0;
+            if (percent > 100) percent = 100;
+
+            const text = editor.value;
+            const totalChars = text.length;
+            if (totalChars === 0) return;
+
+            // %値から文字のターゲットインデックスを計算
+            const targetIndex = Math.floor(totalChars * (percent / 100));
+
+            editor.focus();
+            // カーソルを指定位置へ移動 (範囲選択ではなくピンポイントに配置)
+            editor.setSelectionRange(targetIndex, targetIndex);
+
+            // スクロール位置を計算して連動
+            const scrollHeight = editor.scrollHeight;
+            const clientHeight = editor.clientHeight;
+            // 最大スクロール可能領域に対する%分をスクロールさせる
+            editor.scrollTop = (scrollHeight - clientHeight) * (percent / 100);
+
+            searchStatus.textContent = `全体の ${percent}% 位置に移動しました`;
+        });
+
+        // ショートカットキー設定 (Ctrl+F または Cmd+F)
         window.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
                 e.preventDefault();
@@ -454,7 +507,7 @@
             }
         });
 
-        // 9. TXTファイルとしてダウンロード
+        // 10. TXTファイルとしてダウンロード
         downloadBtn.addEventListener('click', () => {
             const textContent = editor.value;
             const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
