@@ -430,10 +430,17 @@
             }
         });
 
-        // 2. 入力時の自動保存 ＆ 文字数カウント
+        // 2. 入力時の自動保存 ＆ 文字数カウント（デバウンス処理で省電力化）
+        let saveTimeout = null;
         editor.addEventListener('input', () => {
-            localStorage.setItem('local_editor_text', editor.value);
+            // 文字数や行数のカウントはメモリ上の軽い処理なのでリアルタイムで即時更新
             updateStats();
+
+            // LocalStorageへの書き込みは重いため、タイピングが止まってから500ms後にまとめて行う
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                localStorage.setItem('local_editor_text', editor.value);
+            }, 500); // 0.5秒間キー入力がなければ保存
         });
 
         function updateStats() {
